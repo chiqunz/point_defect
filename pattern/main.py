@@ -19,8 +19,8 @@ def main():
     m = model(CASE, incidence, coords, B_fix=B_FIX)
     m.build(filename_k='k.npy', filename_B='B.npy')
     m.optimize()
-    np.save('k', m.k)
-    np.save('B', m.B)
+    np.save('k_final', m.k)
+    np.save('B_final', m.B)
 
 if __name__ == "__main__":
     main()

@@ -6,7 +6,7 @@ import numpy.linalg as LA
 from pattern.constant import P1, P2, EPSILON, K2, STEP_SIZE
 from pattern.tensor import alter_ini
 from pattern.FEM import sha4, dshahat4
-from pattern.eta  import deta, eta
+from pattern.eta import deta, eta
 
 
 def initialize_k(filename=None):
@@ -44,6 +44,7 @@ class model:
         self.energy_test = None
         self.step = STEP_SIZE
         self.space = self.coords[1][0] - self.coords[0][0]
+        self.bc = np.load('bc.npy')
 
     def build(self, filename_k=None, filename_B=None):
         if self.case == -1:
@@ -74,7 +75,7 @@ class model:
             incidence_local = self.incidence[ele_idx]
             k_local = self.k[incidence_local]  # (4,2)
             B_local = self.B[incidence_local]  # (4,2,2)
-            gradk_ele = np.tensordot(k_local, self.dNhat[ele_idx], axes=([0, 0]))  # (2,2,4)          
+            gradk_ele = np.tensordot(k_local, self.dNhat[ele_idx], axes=([0, 0]))  # (2,2,4)
             gradB_ele = np.tensordot(B_local, self.dNhat[ele_idx], axes=([0, 0]))  # (2,2,2,4)
             k_ele = k_local.T @ self.N  # (2,4)
             B_ele = np.tensordot(B_local, self.N, axes=([0, 0]))  # (2,2,4)
@@ -146,7 +147,7 @@ class model:
 
                 partB = part1 + part2 + part3
                 update_B.append(partB * self.detJ[ele_idx])
-        
+
         for s in range(2):
             tmp = k_inc[:, [s]]
             np.add.at(tmp, self.incidence.flatten(), np.vstack(update_k)[:, [s]])
@@ -159,7 +160,7 @@ class model:
         if not self.Bfix:
             return k_inc, B_inc
         return k_inc, 0
-    
+
     def optimize(self):
         energy_old = 1e10
         energy_old_old = 1e10
@@ -180,9 +181,11 @@ class model:
                 print(f'shrink step size: {self.step}')
                 continue
             k_backup[:] = self.k
+            k_inc[self.bc] = 0
             self.k -= self.step * k_inc
             if not self.Bfix:
                 B_backup[:] = self.B
+                B_inc[self.bc] = 0
                 self.B -= self.step * B_inc
             self.energy_rate = np.abs(energy_old - self.energy) / self.energy / self.step
             if iter_idx % 10 == 0:
